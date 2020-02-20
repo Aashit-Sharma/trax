@@ -70,6 +70,19 @@ class BaseLayerTest(absltest.TestCase):
     self.assertNotEqual(rng1.tolist(), rng3.tolist())
     self.assertNotEqual(rng2.tolist(), rng4.tolist())
 
+  def test_output_signature(self):
+    input_signature = (ShapeDtype((2, 3, 5)), ShapeDtype((2, 3, 5)))
+    layer = base.Fn(lambda x, y: x + y)  # n_in = 2, n_out = 1
+    output_signature = layer.output_signature(input_signature)
+    self.assertEqual(output_signature, ShapeDtype((2, 3, 5)))
+
+    input_signature = ShapeDtype((5, 7))
+    layer = base.Fn(lambda x: (x, 2 * x, 3 * x))  # n_in = 1, n_out = 3
+    output_signature = layer.output_signature(input_signature)
+    self.assertEqual(output_signature, (ShapeDtype((5, 7)),) * 3)
+    self.assertNotEqual(output_signature, (ShapeDtype((4, 7)),) * 3)
+    self.assertNotEqual(output_signature, (ShapeDtype((5, 7)),) * 2)
+
   def test_fn_layer_example(self):
     layer = base.Fn(lambda x, y: (x + y, np.concatenate([x, y], axis=0)))
     input_signature = (ShapeDtype((2, 7)), ShapeDtype((2, 7)))
@@ -82,13 +95,13 @@ class BaseLayerTest(absltest.TestCase):
     self.assertEqual([int(y) for y in xs], [2, 3])
 
   def test_fn_layer_fails_wrong_f(self):
-    with self.assertRaisesRegexp(ValueError, 'default arg'):
+    with self.assertRaisesRegex(ValueError, 'default arg'):
       base.Fn(lambda x, sth=None: x)
-    with self.assertRaisesRegexp(ValueError, 'keyword arg'):
+    with self.assertRaisesRegex(ValueError, 'keyword arg'):
       base.Fn(lambda x, **kwargs: x)
 
   def test_fn_layer_varargs_n_in(self):
-    with self.assertRaisesRegexp(ValueError, 'variable arg'):
+    with self.assertRaisesRegex(ValueError, 'variable arg'):
       base.Fn(lambda *args: args[0])
     # Check that varargs work when n_in is set.
     id_layer = base.Fn(lambda *args: args[0], n_in=1)
@@ -98,7 +111,7 @@ class BaseLayerTest(absltest.TestCase):
     self.assertEqual(output_shape, expected_shape)
 
   def test_fn_layer_difficult_n_out(self):
-    with self.assertRaisesRegexp(ValueError, 'n_out'):
+    with self.assertRaisesRegex(ValueError, 'n_out'):
       # Determining the output of this layer is hard with dummies.
       base.Fn(lambda x: np.concatencate([x, x], axis=4))
     # Check that this layer works when n_out is set.
